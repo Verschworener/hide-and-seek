@@ -1,0 +1,82 @@
+#Nametag Hiding Functions
+#Dm me at Death_Source#1925 for help, or join https://discord.gg/9M9McdtvMG, our community discord. 
+
+
+function hideNametag(p: player):   
+    if {nametagoff::%{_u}%} is true:
+        set {_e::*} to passengers of {_p}
+        kill {_e::1}
+    set {_u} to uuid of {_p}
+    spawn an armor stand at location of {_p} with nbt nbt compound of "{Invisible:1b,Marker:1b,Invulnerable:1b}"
+    set {nametagoff::%{_u}%} to true
+    set metadata "nametag" of last spawned entity to true
+    make last spawned entity ride {_p}
+
+on leave:
+    if {nametagoff::%uuid of player%} is true:
+        set {_e::*} to passengers of player
+        kill {_e::1}
+on join:
+    if {nametagoff::%uuid of player%} is true:
+        hideNametag(player)
+
+
+function showNametag(p: player):
+    set {_u} to uuid of {_p}
+    set {_e::*} to passengers of {_p}
+    kill {_e::1}
+    set {nametagoff::%{_u}%} to false
+
+
+function specialtp(p: player, l: location):   
+    set {_u} to uuid of {_p}
+    if {nametagoff::%{_u}%} is true:
+        set {_e::*} to passengers of {_p}
+        kill {_e::1}
+        eject any passengers from {_p}
+        teleport {_p} to {_l}
+        hideNametag({_p})
+
+every 10 seconds:
+    loop all armor stands:
+        if metadata "nametag" of loop-entity is true:
+            if vehicle of loop-entity is not set:
+                kill loop-entity
+
+on stop:
+    loop all armor stands:
+        if metadata "nametag" of loop-entity is true:
+            kill loop-entity
+
+
+
+#Example commands
+
+
+command /nametag [<text>] [<player>]:
+    permission: nametag.admin
+    trigger:
+        if arg-2 is not set:
+            if arg-1 is "hide" or "remove":
+                hideNametag(player)
+            if arg-1 is "show" or "reveal":
+                showNametag(player)
+        else if arg-2 is set:
+            if arg-1 is "hide" or "remove":
+                hideNametag(arg-2)
+            if arg-1 is "show" or "reveal":
+                showNametag(arg-2)
+
+command /specialtp [<player>] [<player>]:
+	permission: nametag.tp
+	trigger:
+		if arg-2 is set:
+			specialtp(arg-1, (arg-2's location))
+			send "&6Teleported %arg-1% to %arg-2%!"
+		else if arg-1 is set:
+			specialtp(player, (arg-1's location))
+			send "&6Teleported you to %arg-1%!"
+
+on tab complete of "nametag":
+    set tab completions for position 1 to "hide" and "remove" and "show" and "reveal"
+    
