@@ -1,0 +1,1123 @@
+on skript start:
+    clear {hide::hiders::*}
+    clear {hide::spectators::*}
+    clear {hide::seekers::*}
+    kill all chickens in world "%{hide::world}%"
+    kill all skeletons in world "%{hide::world}%"
+    kill all zombies in world "%{hide::world}%"
+    kill all spiders in world "%{hide::world}%"
+    kill all creepers in world "%{hide::world}%"
+
+on skript stop:
+    loop {hide::seekers::*}:
+        add loop-value to {hide::Xseekers::*}
+
+on join:
+    send resource pack "https://raw.githubusercontent.com/Verschworener/hide-and-seek/refs/heads/main/texturepack/hide-1.0.zip" to player
+    set join message to ""
+    set player's tab list header to " %nl% %nl% %nl% %{hide::logo}%"
+    if {hide::started} is false:
+        clear player's inventory
+        if player has permission "hide.admin":
+            set slot 8 of player to light blue concrete powder named "&bHide'n'Seek"
+        if {hide::Xseekers::*} does not contain player:
+            set join message to "&b&l[Hide'n'Seek] &6%player% (&aHider&6) &3hat das Spiel betreten"
+            add player to {hide::hiders::*}
+            teleport player to {hide::loc::waiting}
+        else:
+            set join message to "&b&l[Hide'n'Seek] &6%player% (&cSeeker&6) &3hat das Spiel betreten"
+            add player to {hide::seekers::*}
+            remove player from {hide::Xseekers::*}
+            teleport player to {hide::loc::seekers}
+    else if {hide::Xseekers::*} contains player:
+        set join message to "&b&l[Hide'n'Seek] &6%player% (&cSeeker&6) &3hat das Spiel betreten"
+        add player to {hide::seekers::*}
+        remove player from {hide::Xseekers::*}
+        teleport player to {hide::loc::seekers}
+        if {hide::marker} = "head":
+            set {_i} to a paper named "&6&lSeeker"
+            set item model of {_i} to "powerups:seeker"
+            set player's helmet to {_i}
+        else:
+            apply infinite glowing to player
+    else:
+        add player to {hide::spectators::*}
+        set player's gamemode to spectator
+        teleport player to {hide::loc::spectators}
+
+on quit:
+    set quit message to ""
+    remove player from {hide::spectators::*}        
+    if {hide::hiders::*} contains player:
+        remove player from {hide::hiders::*}
+        set quit message to "&b&l[Hide'n'Seek] &6%player% (&aHider&6) &3hat das Spiel verlassen"
+        wait 1 second
+        if {hide::started} is true:
+            if size of {hide::hiders::*} = 2:
+                set {hide::hider::third} to player's name
+            if size of {hide::hiders::*} = 1:
+                set {hide::hider::second} to player's name
+            if size of {hide::hiders::*} = 0:
+                set {hide::hider::first} to player's name
+                hideEnd("seeker")
+            if size of online players = 0:
+                set {hide::started} to false
+                set {_w} to world border of world "%{hide::world}%"
+                set world border size of {_w} to 30000
+    else if {hide::seekers::*} contains player:
+        remove player from {hide::seekers::*}
+        add player to {hide::Xseekers::*}
+        set quit message to "&b&l[Hide'n'Seek] &6%player% (&cSeeker&6) &3hat das Spiel verlassen"
+
+on load:
+    set gamerule doMobSpawning of world "%{hide::world}%" to false
+    set gamerule doDaylightCycle of world "%{hide::world}%" to false
+    set gamerule doImmediateRespawn of world "%{hide::world}%" to true
+    set gamerule showDeathMessages of world "%{hide::world}%" to false
+    set gamerule doMobLoot of world "%{hide::world}%" to false
+    set gamerule mobGriefing of world "%{hide::world}%" to false
+    if {hide::world} is set:
+        set {_w} to world border of world "%{hide::world}%"
+    if {hide::started} is not set:
+        set {hide::started} to false
+    set {hide::powerups::*} to "pearl", "transformation", "speed", "eye" and "heal"
+    if {hide::borderpreset} is not set:
+        set {hide::borderpreset} to 100
+    if {hide::timepreset} is not set:
+        set {hide::timepreset} to 60
+    if {hide::marker} is not set:
+        set {hide::marker} to "light"
+    if {hide::powerupSpeed} is not set:
+        set {hide::powerupSpeed} to "&aNormal"
+        set {hide::powerupDividend} to 1000
+
+    set {hide::tag::hider::transformation} to "&e&lTransformation"
+    set {hide::tag::hider::speed} to "&b&lSpeed VIII"
+    set {hide::tag::hider::eye} to "&2&lUnsichtbarkeit"
+    set {hide::tag::hider::pearl} to "&3&lTeleport"
+    set {hide::tag::hider::heal} to "&c&lHeilung"
+    set {hide::tag::seeker::transformation} to "&e&lTransformation"
+    set {hide::tag::seeker::speed} to "&b&lLangsamkeit V"
+    set {hide::tag::seeker::eye} to "&2&lGlowing"
+    set {hide::tag::seeker::pearl} to "&3&lRandom Teleport"
+    set {hide::tag::seeker::heal} to "&c&lSchaden"
+
+    set {hide::lore::hider::transformation} to "&e&oWerde zum Minion (10s)"
+    set {hide::lore::hider::speed} to "&b&oWerde zu Sonic"
+    set {hide::lore::hider::eye} to "&2&oWerde zum Geist"
+    set {hide::lore::hider::pearl} to "&3&oTeleportiere dich 5s in der Zeit zurück!"
+    set {hide::lore::hider::heal} to "&c&oHeile dich!"
+    set {hide::lore::seeker::transformation} to "&e&oVerwandle die Hider in Riesen (10s)"
+    set {hide::lore::seeker::speed} to "&b&oVerwandle die Hider in Schnecken"
+    set {hide::lore::seeker::eye} to "&2&oVerwandle die Hider in Leuchtfeuer"
+    set {hide::lore::seeker::pearl} to "&3&oTeleportiere alle Hider an neue Orte"
+    set {hide::lore::seeker::heal} to "&c&oSetze alle Spieler auf 1 Herz"
+
+    set {hide::mobs::*} to "skeleton", "zombie", "creeper" and "spider"
+    set {hide::deathAnimations::*} to "sword", "anvil", "lightning", "chickenrain", "gravel", "tnt" and "ghost"
+    set {hide::loc::args::*} to "waiting", "end", "spectators", "hiders", "seekers", "location1", "location2", "first", "second" and "third"
+    set {hide::tag::loc::waiting} to "&6Warteraum für Hider"
+    set {hide::tag::loc::end} to "&6Ort der Siegerehrung"
+    set {hide::tag::loc::spectators} to "&6Spawn für Spectator"
+    set {hide::tag::loc::hiders} to "&6Spawn für Hider"
+    set {hide::tag::loc::seekers} to "&6Spawn für Seeker"
+    set {hide::tag::loc::location1} to "&6Untere Ecke der Arena"
+    set {hide::tag::loc::location2} to "&6Obere Ecke der Arena"
+    set {hide::tag::loc::first} to "&6Podiums-Platz Gold"
+    set {hide::tag::loc::second} to "&6Podiums-Platz Silber"
+    set {hide::tag::loc::third} to "&6Podiums-Platz Bronze"
+
+    set {hide::logo} to ""
+
+function gui(t:text, p: player):
+    if {_t} = "hide":
+        set metadata tag "hide" of {_p} to chest inventory with 3 rows named "     &d&l// Hide and Seek \\"
+        set slot 9 of metadata tag "hide" of {_p} to barrier named "&d&lFinale Bordergröße: %{hide::borderpreset}%%%" with lore "&3Leftclick: +10" and "&bRightclick: -10"
+        set {_i} to a red wool
+        set item model of {_i} to "powerups:speed"
+        set slot 11 of metadata tag "hide" of {_p} to {_i} named "&aPower-Up Spawning: %{hide::powerupSpeed}%"
+        if {hide::started} is false:
+            set slot 13 of metadata tag "hide" of {_p} to lime concrete powder named "&a&lStart"
+        else:
+            set slot 13 of metadata tag "hide" of {_p} to red concrete powder named "&c&lStop"
+        set {_i} to a paper
+        set item model of {_i} to "powerups:seeker"
+        if {hide::marker} is "head":
+            set slot 15 of metadata tag "hide" of {_p} to {_i} named "&6Seeker-Marker: &eHead-Item"
+        else:
+            set slot 15 of metadata tag "hide" of {_p} to light named "&6Seeker-Marker: &eGlowing"
+        set slot 17 of metadata tag "hide" of {_p} to clock named "&b&lSpielzeit: %{hide::timepreset}%" with lore "&3Leftclick: +15" and "&bRightclick: -15"
+        open metadata tag "hide" of {_p} to {_p}
+
+function hideEnd(w: text):
+    set {hide::started} to false
+    set {hide::countdown} to false
+    set {hide::hidetime} to false
+    broadcast ""
+    if {_w} = "seeker":
+        broadcast "&b&l[Hide'n'Seek] &6Die &c&lSeeker &6haben gewonnen!"
+        broadcast "&b&l[Hide'n'Seek] &eAlle &bHider &ewurden gefunden!"
+        send title "&6Die &c&lSeeker &6haben gewonnen!" with subtitle "&eAlle &bHider &ewurden gefunden!" to all players
+    else if {_w} = "hider":
+        broadcast "&b&l[Hide'n'Seek] &6Die &b&lHider &6haben gewonnen!"
+        broadcast "&b&l[Hide'n'Seek] &eDie Zeit ist abgelaufen!" 
+        send title "&6Die &b&lHider &6haben gewonnen!" with subtitle "&eDie Zeit ist abgelaufen!" to all players
+    loop all players:
+        play sound "entity.wither.spawn" with volume 0.5 from loop-player to loop-player
+        set loop-player's helmet to air
+        set slot 4 of loop-player to air
+    set {_w} to world border of world "%{hide::world}%"
+    set world border size of {_w} to 30000
+    wait 1 second
+    teleport all players to {hide::loc::end}
+    loop all players:
+        set loop-player's gamemode to survival
+        play sound "custom:8_bit_surf" with volume 0.5 from loop-player to loop-player
+    wait 2 seconds
+    loop {hide::spectators::*}:
+        add loop-value parsed as player to {hide::hiders::*}
+    clear {hide::spectators::*}
+    broadcast ""
+    broadcast "&b&l[Hide'n'Seek] &6&lSiegerehrung:"
+    broadcast "&7> 3. Platz: %{hide::hider::third}%"
+    teleport {hide::hider::third} parsed as player to {hide::loc::third}
+    loop all players:
+        send title "&7&l%{hide::hider::third}%" with subtitle "&7< 3. Platz >" to loop-player for 3 second
+    loop 5 times:
+        wait 1 second
+        if {hide::started} is true:
+            stop
+    broadcast "&6> 2. Platz: %{hide::hider::second}%"
+    teleport {hide::hider::second} parsed as player to {hide::loc::second}
+    loop all players:
+        send title "&6&l%{hide::hider::second}%" with subtitle "&6< 2. Platz >" to loop-player for 5 seconds
+    loop 7 times:
+        wait 1 second
+        if {hide::started} is true:
+            stop
+    broadcast "&d> 1. Platz: %{hide::hider::first}%"
+    teleport {hide::hider::first} parsed as player to {hide::loc::first}
+    loop all players:
+        send title "&d&l%{hide::hider::first}%" with subtitle "&d< 1. Platz >" to loop-player for 7 seconds
+    loop 12 times:
+        wait 1 second
+        if {hide::started} is true:
+            stop
+    send title "&6Danke fürs Mitspielen!" with subtitle "&eBis zum nächsten Mal" to all players for 10 seconds
+
+function powerup():
+    set {_w} to world border of world "%{hide::world}%"
+    set {_center} to world border center of {_w}
+    set {_xcenter} to x-coordinate of {_center}
+    set {_zcenter} to z-coordinate of {_center}
+    set {_size} to world border size of {_w}
+    set {_x} to a random number between ({_xcenter} - {_size} / 2) and ({_xcenter} + {_size} / 2)
+    set {_z} to (random number between ({_zcenter} - {_size} / 2) and ({_zcenter} + {_size} / 2))
+    set {_y} to 100
+    set {_loop} to true
+    loop 50 times:
+        if {_loop} is true:
+            set {_l} to location at {_x}, {_y}, {_z} in world {hide::world}
+            if all:
+                block at {_l} is air
+                block beneath {_l} is air
+                block 2 beneath {_l} is not air
+            then:
+                set {_loop} to false
+            else:
+                add 1 to {_y}
+    spawn item display at {_l}
+    play sound "block.azalea.place" at {_l}
+    set {_element} to a random element of {hide::powerups::*}
+    set {_i} to red wool
+    set item model of {_i} to "powerups:%{_element}%"
+    set {_d} to last spawned item display
+    set display item of {_d} to {_i}
+    set display scale of {_d} to vector(1,1,1)
+    set yaw of {_d} to 0
+    set pitch of {_d} to 0
+    set {_h2} to 0
+    set {_t} to 0
+    while {_t} < 400:
+        add 1 to {_t}
+        add 5 to yaw of {_d}
+        if {_h2} = 0:
+            set {_l} to location 0.05 above {_d}
+            set {_h1} to {_h2}
+            add 1 to {_h2}
+        else if {_h1} = 20:
+            set {_l} to location 0.05 below {_d}
+            set {_h1} to {_h2}
+            remove 1 from {_h2}
+        else if {_h1} < {_h2}:
+            set {_l} to location 0.05 above {_d}
+            set {_h1} to {_h2}
+            add 1 to {_h2}
+        else if {_h1} > {_h2}:
+            set {_l} to location 0.05 below {_d}
+            set {_h1} to {_h2}
+            remove 1 from {_h2}
+        teleport {_d} to {_l}
+        wait 1 tick
+    kill {_d}
+
+function deathAnimation(p: player, p2: player):
+    reset scale attribute of {_p}
+    set {_a} to a random element of {hide::deathAnimations::*}
+    set {_l} to location of {_p}
+    set {_ploc} to location of {_p}
+    drawHelix({_p})
+    wait 1 second
+    if {_a} = "anvil":
+        loop 10 times:
+            if block above {_l} = air:
+                set {_l} to block above {_l}
+        set block at {_l} to anvil
+        wait 23 ticks
+        set {_p}'s gamemode to spectator
+        wait 5 seconds
+        loop blocks in radius 2 around {_ploc}:
+            if loop-block = anvil or chipped anvil or damaged anvil:
+                set loop-block to air
+    
+    else if {_a} = "lightning":
+        strike lightning effect at {_p}
+        play sound "entity.lightning_bolt.thunder" at {_ploc}
+        set {_p}'s gamemode to spectator
+        
+    else if {_a} = "sword":
+        set {_l} to location 3 blocks above {_l}
+        spawn item display at {_l}
+        set {_d} to last spawned item display
+        set display item of {_d} to iron sword
+        set yaw of {_d} to 45
+        set pitch of {_d} to 0
+        rotate {_d} around z axis by 135 degrees
+        set scale of {_d} to 4
+        play sound "entity.wither.spawn" with volume 0.4 at {_ploc}
+        wait 5 ticks
+        loop 10 times:
+            set {_l} to location 0.05 above {_d}
+            teleport {_d} to {_l}
+            wait 1 tick
+        loop 20 times:
+            rotate {_d} around y axis by 36 degrees
+            wait 1 tick
+        wait 5 ticks
+        loop 8 times:
+            set {_l} to location 0.2 below {_d}
+            teleport {_d} to {_l}
+            add 0.2 to size of {_d}
+            wait 1 tick
+        play sound "entity.lightning_bolt.impact" at {_ploc}
+        set {_p}'s gamemode to spectator
+        wait 2 seconds
+        kill {_d}
+    else if {_a} = "chickenrain":
+        loop 50 times:
+            set {_l1} to {_l}
+            set {_x} to a random number between -0.3 and 0.3
+            set {_z} to a random number between -0.3 and 0.3
+            add {_x} to x-coordinate of {_l1}
+            add {_z} to z-coordinate of {_l1}
+            spawn chicken at {_l1}
+        set {_p}'s gamemode to spectator
+        create a safe explosion of force 2 at {_p}
+    else if {_a} = "gravel":
+        loop 10 times:
+            if block above {_l} = air:
+                set {_l} to block above {_l}
+        loop 4 times:
+            set block at {_l} to black concrete powder
+            set block north of {_l} to white concrete powder
+            set block south of {_l} to white concrete powder
+            set {_l} to block below {_l}
+        set {_l} to block 3 blocks above {_l}
+        set block north of {_l} to black concrete powder
+        set block south of {_l} to black concrete powder
+        loop 5 times:
+            play sound "block.sand.place" at {_l}
+            wait 1 tick
+        wait 1 second
+        set {_p}'s gamemode to spectator
+        wait 5 seconds
+        loop all blocks in radius 4 around location of {_ploc}:
+            if loop-block = black concrete powder or white concrete powder:
+                set loop-block to air
+    else if {_a} = "tnt":
+        spawn tnt at {_l}
+        wait 4 seconds
+        set {_p}'s gamemode to spectator
+    else if {_a} = "ghost":
+        set {_p}'s gamemode to spectator
+        draw 20 of dust using dustOption(white, 10) at {_p}
+        draw 20 of dust using dustOption(white, 10) at location 1 above {_p}
+        draw 20 of dust using dustOption(white, 10) at location 2 above {_p}
+        spawn armor stand at {_l}
+        set {_a} to last spawned armor stand
+        set helmet of {_a} to skull of {_p}
+        set visibility of {_a} to false
+        loop 10 times:
+            push {_a} upwards at speed 0.3
+            if helmet of {_a} is skull of {_p}:
+                set helmet of {_a} to skeleton skull
+            else:
+                set helmet of {_a} to skull of {_p}
+            play sound "entity.phantom.hurt" at location of {_p}
+            wait 5 ticks
+        kill {_a}
+    if {hide::started} is true:
+        remove {_p}'s name from {hide::hiders::*}
+        if {hide::spectators::*} does not contain {_p}:
+            add {_p} to {hide::spectators::*}
+        if size of {hide::hiders::*} = 2:
+            set {hide::hider::third} to {_p}'s name
+        if size of {hide::hiders::*} = 1:
+            set {hide::hider::second} to {_p}'s name
+        if size of {hide::hiders::*} = 0:
+            set {hide::hider::first} to {_p}'s name
+        broadcast ""
+        broadcast "&b&l[Hide'n'Seek] &d%{_p}% &3wurde von &5%{_p2}% &3gefunden!"
+        if size of {hide::hiders::*} is not 0:
+            broadcast "   &3> Noch %size of {hide::hiders::*}% Hider am Leben!"
+        else:
+            hideEnd("seeker")
+
+function drawHelix(p: player):
+    set {_shape} to helix with radius 1, height 2 and winding rate 0.8 loops per block
+    loop 5 times:
+        draw the shape {_shape} at {_p}'s location:
+            set event-shape's particle to dripping lava
+        draw the shape {_shape} at {_p}'s location
+        rotate shape {_shape} around y-axis by 90 degrees
+        wait 5 ticks
+
+function drawSmallHelix(p: player, pa: color):
+    set {_shape} to helix with radius 1, height 1 and winding rate 0.8 loops per block
+    loop 10 times:
+        draw the shape {_shape} at location 1.5 above {_p}'s location:
+            set event-shape's particle to dust particle using dustOption({_pa}, 1)
+        rotate shape {_shape} around y-axis by 90 degrees
+        wait 2 ticks
+
+
+every tick:
+    loop all players:
+        if {hide::started} is true:
+            if at least one of:
+                {hide::hiders::*} contains loop-player
+                {hide::seekers::*} contains loop-player
+            then:
+                set {_d} to item display nearest to loop-player
+                set {_l} to location of {_d}
+                if distance between loop-player and {_l} < 2:
+                    set {_i} to display item of {_d}
+                    if {_i} = red wool:
+                        set {_t} to item model of {_i}
+                        replace "powerups:" with "" in {_t}
+                        if {hide::hiders::*} contains loop-player:
+                            set slot 4 of loop-player to {_i} named "%{hide::tag::hider::%{_t}%}%"
+                            set lore of slot 4 of loop-player to "%{hide::lore::hider::%{_t}%}%"
+                        else if {hide::seekers::*} contains loop-player:
+                            set slot 4 of loop-player to {_i} named "%{hide::tag::seeker::%{_t}%}%"
+                            set lore of slot 4 of loop-player to "%{hide::lore::seeker::%{_t}%}%"
+                        play sound "entity.experience_orb.pickup" to loop-player
+                        kill {_d}
+
+every 5 seconds:
+    if {hide::started} is true:
+        set {_dist1} to difference between {hide::loc::location1}'s x-coordinate and {hide::loc::location2}'s x-coordinate
+        set {_dist2} to difference between {hide::loc::location1}'s z-coordinate and {hide::loc::location2}'s z-coordinate
+        set {_times} to round {_dist1}*{_dist1}/{hide::powerupDividend}
+        loop {_times} times:
+            powerup()
+
+every second:
+    loop {hide::hiders::*}:
+        if location of loop-value is not within world border of {hide::world}:
+            damage loop-value by 1 heart
+        send action bar "&6&lRolle: &aHider" to loop-value
+        set loop-value's tab list name to "&2&l[Hider] &a%loop-value%"
+    loop {hide::seekers::*}:
+        send action bar "&6&lRolle: &cSeeker" to loop-value
+        set loop-value's tab list name to "&c&l[Seeker] &6%loop-value%"
+    loop {hide::spectators::*}:
+        send action bar "&6&lRolle: &7Spectator" to loop-value
+        set loop-value's tab list name to "&f&l[Spec] &7%loop-value%"
+
+    if all:
+        {hide::started} is true
+        {hide::hidetime} is false
+        {hide::countdown} is false
+    then:
+        if {hide::time} > 0:
+            remove 1 from {hide::time}
+            set {_time} to {hide::time}
+            set {hide::time::hours} to 0
+            set {hide::time::minutes} to 0
+            set {hide::time::seconds} to 0
+            loop 10 times:
+                if {_time} >= 3600:
+                    add 1 to {hide::time::hours}
+                    remove 3600 from {_time}
+            loop 60 times:
+                if {_time} >= 60:
+                    add 1 to {hide::time::minutes}
+                    remove 60 from {_time}
+            set {hide::time::seconds} to {_time}
+            if {hide::time::minutes} < 10:
+                set {hide::time::minutes} to "0%{hide::time::minutes}%"
+            if {hide::time::seconds} < 10:
+                set {hide::time::seconds} to "0%{hide::time::seconds}%"
+        else:
+            hideEnd("hider")
+
+    if {hide::started} is true:
+        loop {hide::hiders::*}:
+            set {_p} to "%loop-value%" parsed as player
+            loop 4 times:
+                if {hide::loc::%{_p}%::%loop-value-2%} is not set:
+                    set {hide::loc::%{_p}%::%loop-value-2%} to {_p}'s location
+            loop 4 times:
+                set {hide::loc::%{_p}%::%6 - loop-value-2%} to {hide::loc::%{_p}%::%5 - loop-value-2%}
+            set {hide::loc::%{_p}%::1} to {_p}'s location
+
+every 5 ticks:
+    loop all players:
+        set title of loop-player's fastboard to "%{hide::logo}%"
+        set line 1 of loop-player's fastboard to "&2&l| &l|                     &2&l| &l|"
+        if {hide::started} is true:
+            if {hide::countdown} is true:
+                set line 2 of loop-player's fastboard to "&3&l\\    &bStart in: %{hide::countdownLeft}%s    &3&l//"
+            else if {hide::hidetime} is true:
+                set line 2 of loop-player's fastboard to "&3&l\\ &bVersteckzeit: %{hide::hidetimeLeft}%s  &3&l//"
+            else:
+                set line 2 of loop-player's fastboard to "&3&l\\     &b%{hide::time::hours}% : %{hide::time::minutes}% : %{hide::time::seconds}%      &3&l//"
+        else:
+            set line 2 of loop-player's fastboard to "&3&l\\ &bSpiel beginnt bald &3&l//"
+        set line 3 of loop-player's fastboard to ""
+        set line 4 of loop-player's fastboard to "&a&l> Hider&a............................... %size of {hide::hiders::*}%"
+        set line 5 of loop-player's fastboard to "&c&l> Seeker&c.......................... %size of {hide::seekers::*}%"
+        set line 6 of loop-player's fastboard to "&7&l> Spectator&7................. %size of {hide::spectators::*}%"
+        set line 7 of loop-player's fastboard to ""
+        
+        if {hide::started} is true:
+            set {_w} to world border of world "%{hide::world}%"
+            set {_center} to world border center of {_w}
+            set {_radius} to (world border size of {_w}) / 2
+            set {_locPlayer} to loop-player's location
+            set {_dx} to difference between x-coordinate of {_locPlayer} and x-coordinate of {_center}
+            set {_dz} to difference between z-coordinate of {_locPlayer} and z-coordinate of {_center}
+            set {_dx} to {_radius} - {_dx}
+            set {_dz} to {_radius} - {_dz}
+            if {_dx} < {_dz}:
+                set {_distance} to round {_dx}
+            else:
+                set {_distance} to round {_dz}
+            if {_distance} < 0:
+                set line 8 of loop-player's fastboard to "&6&l> Border: &0%{_distance}% Blöcke"
+            else if {_distance} <= 10:
+                set line 8 of loop-player's fastboard to "&6&l> Border: &c%{_distance}% Blöcke"
+            else if {_distance} <= 30:
+                set line 8 of loop-player's fastboard to "&6&l> Border: &e%{_distance}% Blöcke"
+            else:
+                set line 8 of loop-player's fastboard to "&6&l> Border: &b%{_distance}% Blöcke"
+            set line 9 of loop-player's fastboard to ""
+            set line 10 of loop-player's fastboard to "&5.............. &dGommeHD.net &5..............."
+        else:
+            set line 8 of loop-player's fastboard to "&5.............. &dGommeHD.net &5..............."
+            clear line 9 of loop-player's fastboard
+            clear line 10 of loop-player's fastboard
+
+command /hide [<text>] [<text>] [<text>] [<text>]:
+    trigger:
+        player has permission "hide.admin":
+            arg-1 is not set:
+                gui("hide", player)
+                if {hide::started} is false:
+                    if player's inventory does not contain light blue concrete powder:
+                        set slot 8 of player to light blue concrete powder named "&bHide'n'Seek"
+
+            arg-1 = "start":
+                if all:
+                    size of {hide::seekers::*} > 0
+                    size of {hide::hiders::*} > 0
+                then:
+                    loop {hide::loc::args::*}:
+                        if {hide::loc::%loop-value%} is not set:
+                            send ""
+                            send "&b&l[Hide'n'Seek] &cLege zuerst alle Positionen mit &6&o/hide location &cfest!"
+                            stop
+                    if {hide::started} is true:
+                        send "&b&l[Hide'n'Seek] &cBeende zuerst das laufende Spiel!"
+                        stop
+                    stop all sounds for all players
+                    broadcast ""
+                    broadcast "&b&l[Hide'n'Seek] &6Mögen die Spiele beginnen!"
+                    loop all players:
+                        play sound "custom:boss_time" with volume 0.5 from loop-player to loop-player
+                        clear loop-player's inventory
+                        if loop-player has permission "hide.admin":
+                            set slot 8 of loop-player to light blue concrete powder named "&bHide'n'Seek"
+                    set {hide::started} to true
+                    set {hide::hider::first} to "-"
+                    set {hide::hider::second} to "-"
+                    set {hide::hider::third} to "-"
+                    set {hide::countdownLeft} to 16
+                    set {hide::hidetimeLeft} to 60
+                    set {hide::time} to {hide::timepreset} * 60
+                    set {hide::border} to {hide::borderpreset}
+                    set {hide::bordertime} to {hide::time} / 10
+                    set {_x1} to x-coordinate of {hide::loc::location1}
+                    set {_x2} to x-coordinate of {hide::loc::location2}
+                    set {_z1} to z-coordinate of {hide::loc::location1}
+                    set {_z2} to z-coordinate of {hide::loc::location2}
+                    set {_distance} to difference between {_x1} and {_x2}
+                    if difference between {_z1} and {_z2} > {_distance}:
+                        set {_distance} to difference between {_z1} and {_z2}
+                    loop {hide::hiders::*}:
+                        teleport loop-value to {hide::loc::hiders}
+                        set loop-value's gamemode to survival
+                        execute console command "/nametag hide %loop-value%"
+                    loop {hide::seekers::*}:
+                        teleport loop-value to {hide::loc::seekers}
+                        set loop-value's gamemode to survival
+                        if {hide::marker} = "head":
+                            set {_i} to a paper named "&6&lSeeker"
+                            set item model of {_i} to "powerups:seeker"
+                            set loop-value's helmet to {_i}
+                        else:
+                            apply infinite glowing to loop-value
+                    loop {hide::spectators::*}:
+                        teleport loop-value to {hide::loc::spectators}
+                        set loop-value's gamemode to spectator
+                    set {_w} to world border of world "%{hide::world}%"
+                    set {_distance} to round {_distance}
+                    set world border size of {_w} to {_distance}
+                    set {_xMitte} to ({_x1} + {_x2}) / 2
+                    set {_zMitte} to ({_z1} + {_z2}) / 2
+                    set world border center of {_w} to location({_xMitte},60,{_zMitte})
+                    set world border size of {_w} to {_distance}
+                    set {hide::countdown} to true
+                    loop {hide::hiders::*}:
+                        set walking speed of loop-value to 0
+                    loop {hide::seekers::*}:
+                        set walking speed of loop-value to 0
+                    set {_l} to 16
+                    loop {_l} times:
+                        wait 1 second
+                        if {hide::started} is true:
+                            remove 1 from {_l}
+                            send title "&e- &6%{_l}% &e-" to all players for 1 second with fadein 0 ticks and fadeout 0 ticks
+                            if {_l} < 10:
+                                set {hide::countdownLeft} to "0%{_l}%"
+                            else:
+                                set {hide::countdownLeft} to {_l}
+                        else:
+                            loop all players:
+                                reset walking speed of loop-player
+                            stop
+                    loop {hide::hiders::*}:
+                        send title "&e- &6Versteck Dich! &e-" to loop-value for 2 seconds with fadein 0 ticks
+                        reset walking speed of loop-value
+                    loop {hide::seekers::*}:
+                        send title "&e- &6Versteckzeit beginnt &e-" to loop-value for 2 seconds with fadein 0 ticks
+                        apply blindness to loop-value for 60 seconds
+                    set {hide::countdown} to false
+                    set {hide::hidetime} to true
+                    
+                    set {_l} to 60
+                    loop {_l} times:
+                        wait 1 second
+                        if {hide::started} is true:
+                            remove 1 from {_l}
+                            if {_l} < 10:
+                                set {hide::hidetimeLeft} to "0%{_l}%"
+                            else:
+                                set {hide::hidetimeLeft} to {_l}
+                        else:
+                            loop all players:
+                                reset walking speed of loop-player
+                            stop
+                    set {hide::hidetime} to false
+                    loop all players:
+                        reset walking speed of loop-player
+                    loop all players:
+                        play sound "entity.ender_dragon.growl" from loop-player to loop-player
+                    loop {hide::hiders::*}:
+                        send title "&6Versteckt oder nicht!" with subtitle "&eDie Seeker kommen" to loop-value
+                    loop {hide::spectators::*}:
+                        send title "&6Versteckt oder nicht!" with subtitle "&eDie Seeker kommen" to loop-value
+                    loop {hide::seekers::*}:
+                        send title "&6Los geht's!" with subtitle "&eFindet alle Hider" to loop-value
+                        reset walking speed of loop-value
+                    loop 10 times:
+                        loop {hide::bordertime} times:
+                            if {hide::started} is true:
+                                wait 1 second
+                            else:
+                                stop
+                        set {_shrinkDistance} to {_distance} * (100 - {hide::border}) / 1000
+                        set {_shrinkTime} to "%{hide::bordertime} / 4% seconds" parsed as timespan
+                        broadcast "&b&l[Hide'n'Seek] &6Die Border schrinkt um &b&l%{_shrinkDistance}% &6Blöcke!"
+                        shrink {_w} by {_shrinkDistance} over a period of {_shrinkTime}
+                else:
+                    send ""
+                    send "&b&l[Hide'n'Seek] &cEs müssen sowohl Hider, als auch Seeker festgelegt sein!"
+            
+            arg-1 = "stop":
+                if {hide::started} is true:
+                    stop all sounds for all players
+                    broadcast ""
+                    broadcast "&b&l[Hide'n'Seek] &6Das Spiel wurde abgebrochen!"
+                    set {hide::started} to false
+                    set {_w} to world border of world "%{hide::world}%"
+                    set world border size of {_w} to 30000
+                    set {hide::hidetime} to false
+                    loop all players:
+                        set loop-player's helmet to air
+                        remove glowing from loop-player
+                        send title "&cSpiel abgebrochen" to loop-player
+                        play sound "block.anvil.destroy" with volume 0.7 to loop-player
+                    loop all item displays:
+                        if display item of loop-value is red wool:
+                            kill loop-value
+                    loop {hide::spectators::*}:
+                        remove loop-value parsed as player from {hide::spectators::*}
+                        add loop-value parsed as player to {hide::hiders::*}
+                    loop {hide::hiders::*}:
+                        teleport loop-value parsed as player to {hide::loc::hiders}
+                        execute console command "/nametag show %loop-value%"
+                    loop {hide::seekers::*}:
+                        teleport loop-value parsed as player to {hide::loc::seekers}
+                else:
+                    send ""
+                    send "&b&l[Hide'n'Seek] &cDas Spiel läuft gerade nicht!"
+
+            arg-1 = "location":
+                arg-2 = "spawn":
+                    arg-3 = "waiting", "end", "spectators", "hiders" or "seekers":
+                        set {hide::loc::%arg-3%} to player's location
+                        send ""
+                        send "&b&l[Hide'n'Seek] &3%{hide::tag::loc::%arg-3%}% &a[✔]"
+                arg-2 = "arena":
+                    arg-3 = "location1" or "location2":
+                        set {hide::loc::%arg-3%} to player's location
+                        send ""
+                        send "&b&l[Hide'n'Seek] &3%{hide::tag::loc::%arg-3%}% &a[✔]"
+                        set {hide::world} to player's world
+                        set {_w} to world border of world "%{hide::world}%"
+                        set gamerule doMobSpawning of world {hide::world} to false
+                        set gamerule doDaylightCycle of world {hide::world} to false
+                        set gamerule doImmediateRespawn of world {hide::world} to true
+                        set gamerule showDeathMessages of world "%{hide::world}%" to false
+                arg-2 = "podium":
+                    arg-3 = "first", "second" or "third":
+                        set {hide::loc::%arg-3%} to location of player
+                        send ""
+                        send "&b&l[Hide'n'Seek] &3%{hide::tag::loc::%arg-3%}% &a[✔]"
+                arg-2 = "list":
+                    send ""
+                    loop {hide::loc::args::*}:
+                        if {hide::loc::%loop-value%} is not set:
+                            send "&b&l[Hide'n'Seloop-valueek] &3%{hide::tag::loc::%loop-value%}% &4[✗]"
+                        else:
+                            send "&b&l[Hide'n'Seek] &3%{hide::tag::loc::%loop-value%}% &a[✔]"
+            
+            arg-1 = "infoboard":
+                set {_l} to location 2.85 west of player's location 
+                set {_l} to location 0.5 above {_l}
+                spawn text display at {_l}
+                set {_d} to last spawned text display
+                set display text of {_d} to "&a&l.......................... Hider ..........................", "", "&3Teleportiere Dich 5s in der Zeit zurück!", "", "&eWerde klein wie ein Minion (10s)!", "", "&bWerde so schnell wie Sonic (5s)!", "", "&2Werde unsichtbar (5s)!", "" and "&cHeile Dich und entferne neg. Effekte!"
+                spawn text display at location 5.75 east of {_l}
+                set {_d} to last spawned text display
+                set display text of {_d} to "&c&l....................... Seeker .......................", "", "&3Teleportiere alle Hider an neue Orte!", "", "&eVerwandle Hider in Riesen (50b)!", "", "&bMach Hider langsam (50b)!", "", "&2Gib Hidern Glowing (50b)!", "" and "&cSpawne Mobs bei Hidern (50%%)!"
+                set {_l} to location 3 east of {_l}
+                set {_l} to location 2.8 above {_l}
+                spawn text display at {_l}
+                set {_d} to last spawned text display
+                set display text of {_d} to "&d&l-- Power-Ups --"
+                set display scale of {_d} to vector(2,2,2)
+                remove 0.7 from y-coordinate of {_l}
+                loop 5 times:
+                    set {_loop} to loop-value
+                    spawn item display at {_l}
+                    set {_d} to last spawned item display
+                    set {_element} to {_loop}st element of {hide::powerups::*}
+                    set {_i} to red wool
+                    set item model of {_i} to "powerups:%{_element}%"
+                    set display item of {_d} to {_i}
+                    remove 0.5 from y-coordinate of {_l}
+                loop all displays in radius 8 of player:
+                    set yaw of loop-value to 0
+                    set pitch of loop-value to 0
+                loop all item displays in radius 8 of player:
+                    set display scale of loop-value to vector(0.5,0.5,0.5)
+            arg-1 = "removedisplay":
+                kill all displays in radius 6 of player
+
+        else:
+            send "&cDafür hast du keine Rechte (hide.admin)"
+
+command /hider [<player>]:
+    trigger:
+        arg-1 is not set:
+            clear {hide::hiders::*}
+            clear {hide::spectators::*}
+            loop all players:
+                if {hide::seekers::*} does not contain loop-player:
+                    add loop-player to {hide::hiders::*}
+            send ""
+            send "&b&l[Hide'n'Seek] &fJeder Spieler, der kein &cSeeker &fwar, ist nun &aHider"
+        else:
+            set {_p} to arg-1
+            if {hide::hiders::*} does not contain {_p}:
+                add {_p} to {hide::hiders::*}
+                remove {_p} from {hide::seekers::*}
+                remove {_p} from {hide::spectators::*}
+                send ""
+                send "&b&l[Hide'n'Seek] &6%{_p}% &fist nun &aHider"
+            else:
+                send ""
+                send "&b&l[Hide'n'Seek] &6%{_p}% &fist bereits &aHider"
+
+command /seeker [<player>]:
+    trigger:
+        arg-1 is not set:
+            if {hide::seekers::*} does not contain player:
+                add player to {hide::seekers::*}
+                remove player from {hide::hiders::*}
+                remove player from {hide::spectators::*}
+                teleport player to {hide::loc::seekers}
+                send ""
+                send "&b&l[Hide'n'Seek] &fDu bist nun &cSeeker"
+                apply glowing to player for 5 seconds
+            else:
+                send ""
+                send "&b&l[Hide'n'Seek] &fDu bist bereits &cSeeker"
+        else:
+            set {_p} to arg-1
+            if {hide::seekers::*} does not contain {_p}:
+                add {_p} to {hide::seekers::*}
+                remove {_p} from {hide::hiders::*}
+                remove {_p} from {hide::spectators::*}
+                teleport {_p} to {hide::loc::seekers}
+                send ""
+                send "&b&l[Hide'n'Seek] &6%{_p}% &fist nun &cSeeker"
+            else:
+                send ""
+                send "&b&l[Hide'n'Seek] &6%{_p}% &fist bereits &cSeeker"
+
+command /spectator [<player>]:
+    trigger:
+        arg-1 is not set:
+            if {hide::spectators::*} does not contain player:
+                add player to {hide::spectators::*}
+                remove player from {hide::hiders::*}
+                remove player from {hide::seekers::*}
+                teleport player to {hide::loc::spectators}
+                send ""
+                send "&b&l[Hide'n'Seek] &fDu bist nun &7Spectator"
+            else:
+                send ""
+                send "&b&l[Hide'n'Seek] &fDu bist bereits &7Spectator"
+        else:
+            set {_p} to arg-1
+            if {hide::spectators::*} does not contain {_p}:
+                add {_p} to {hide::spectators::*}
+                remove {_p} from {hide::hiders::*}
+                remove {_p} from {hide::seekers::*}
+                teleport {_p} to {hide::loc::spectators}
+                send ""
+                send "&b&l[Hide'n'Seek] &6%{_p}% &fist nun &7Spectator"
+            else:
+                send ""
+                send "&b&l[Hide'n'Seek] &6%{_p}% &fist bereits &7Spectator"
+
+on inventory click:
+    if event-inventory = metadata tag "hide" of player:
+        cancel event
+        if event-item = barrier:
+            if click action = left mouse button:
+                if {hide::borderpreset} < 100:
+                    add 10 to {hide::borderpreset}
+            else if click action = right mouse button:
+                if {hide::borderpreset} > 0:
+                    remove 10 from {hide::borderpreset}
+            gui("hide", player)
+
+        else if event-item = red wool:
+            if {hide::powerupSpeed} = "&aNormal":
+                set {hide::powerupSpeed} to "&6Hoch"
+                set {hide::powerupDividend} to 500
+            else if {hide::powerupSpeed} = "&6Hoch":
+                set {hide::powerupSpeed} to "&dSehr Hoch"
+                set {hide::powerupDividend} to 1000
+            else if {hide::powerupSpeed} = "&dSehr Hoch":
+                set {hide::powerupSpeed} to "&eGering"
+                set {hide::powerupDividend} to 4000
+            else if {hide::powerupSpeed} = "&eGering":
+                set {hide::powerupSpeed} to "&aNormal"
+                set {hide::powerupDividend} to 2000
+            gui("hide", player)
+
+        else if event-item = clock:
+            if click action = left mouse button:
+                if {hide::timepreset} < 240:
+                    add 15 to {hide::timepreset}
+            else if click action = right mouse button:
+                if {hide::timepreset} > 15:
+                    remove 15 from {hide::timepreset}
+            gui("hide", player)
+
+        else if event-item = lime concrete powder:
+            make player execute command "/hide start"
+            close player's inventory
+
+        else if event-item = red concrete powder:
+            make player execute command "/hide stop"
+            close player's inventory
+        
+        else if event-item = paper:
+            set {hide::marker} to "light"
+            gui("hide", player)
+        
+        else if event-item = light:
+            set {hide::marker} to "head"
+            gui("hide", player)
+
+    else if item model of event-item = "powerups:pearl", "powerups:eye", "powerups:speed", "powerups:transformation", "powerups:heal" or "powerups:seeker":
+        if player's gamemode is not creative:
+            cancel event
+        
+on rightclick:
+    if item model of event-item = "powerups:pearl", "powerups:eye", "powerups:speed", "powerups:transformation" or "powerups:heal":
+        cancel event
+        play sound "entity.experience_orb.pickup"
+        if player's gamemode is not creative:
+            remove event-item from player's inventory
+        if item model of event-item = "powerups:transformation":
+            drawSmallHelix(player, yellow)
+            if {hide::hiders::*} contains player:
+                set {_a} to a random number between 0.1 and 0.5
+                set player's scale attribute to {_a}
+                wait 10 seconds
+                reset player's scale attribute
+            else if {hide::seekers::*} contains player:
+                set {_p::*} to all players in radius 50 around player
+                loop {_p::*}:
+                    if loop-value is not player:
+                        set {_a} to a random number between 2 and 4
+                        set loop-value's scale attribute to {_a}
+                wait 10 seconds
+                loop {_p::*}:
+                    if loop-value is not player:
+                        reset loop-value's scale attribute
+
+        if item model of event-item = "powerups:eye":
+            drawSmallHelix(player, green)
+            if {hide::hiders::*} contains player:
+                apply invisibility to player for 5 seconds
+            else if {hide::seekers::*} contains player:
+                set {_p::*} to all players in radius 50 around player
+                loop {_p::*}:
+                    if loop-value is not player:
+                        apply glowing to loop-value for 20 seconds
+
+
+        if item model of event-item = "powerups:speed":
+            drawSmallHelix(player, light blue)
+            if {hide::hiders::*} contains player:
+                apply speed 8 to player for 5 seconds
+            else if {hide::seekers::*} contains player:
+                set {_p::*} to all players in radius 50 around player
+                loop {_p::*}:
+                    if loop-value is not player:
+                        apply slowness 5 to loop-value for 10 seconds
+
+        if item model of event-item = "powerups:pearl":
+            drawSmallHelix(player, cyan)
+            if {hide::hiders::*} contains player:
+                teleport player to {hide::loc::%player%::5}
+            else if {hide::seekers::*} contains player:
+                set {_w} to world border of world "%{hide::world}%"
+                set {_center} to world border center of {_w}
+                set {_xcenter} to x-coordinate of {_center}
+                set {_zcenter} to z-coordinate of {_center}
+                set {_size} to world border size of {_w}
+                loop {hide::hiders::*}:
+                    set {_x} to a random number between ({_xcenter} - {_size} / 2) and ({_xcenter} + {_size} / 2)
+                    set {_z} to a random number between ({_zcenter} - {_size} / 2) and ({_zcenter} + {_size} / 2)
+                    set {_y1} to y-coordinate of {hide::loc::location1}
+                    set {_y2} to y-coordinate of {hide::loc::location2}
+                    if {_y1} < {_y2}:
+                        set {_y} to {_y1}
+                    else:
+                        set {_y} to {_y2}
+                    set {_loop} to true
+                    loop 5 times:
+                        if {_loop} is true:
+                            loop 30 times:
+                                if {_loop} is true:
+                                    set {_l} to location at {_x}, {_y}, {_z} in world "%{hide::world}%"
+                                    if all:
+                                        block above {_l} is air
+                                        block at {_l} is air
+                                        block beneath {_l} is not air
+                                    then:
+                                        set {_loop} to false
+                                    else:
+                                        add 1 to  {_y}
+                    if {_loop} is false:
+                        teleport loop-value to {_l}
+
+        else if item model of event-item = "powerups:heal":
+            drawSmallHelix(player, red)
+            if {hide::hiders::*} contains player:
+                heal player by 10 hearts
+                remove slowness from player
+                remove glowing from player
+                if player's scale attribute > 2:
+                    reset player's scale attribute
+            else if {hide::seekers::*} contains player:
+                loop {hide::hiders::*}:
+                    chance of 50%:
+                        set {_m} to a random element of {hide::mobs::*}
+                        spawn {_m} at loop-value's location
+                            
+    else if event-item = light blue concrete powder:
+        if name of event-item = "&bHide'n'Seek":
+            make player execute command "/hide"
+
+on damage:
+    if victim is a player:
+        if attacker is a player:
+            if {hide::started} is true:
+                if {hide::hidetime} is false:
+                    if damage cause is not a plugin:
+                        cancel event
+                        if {hide::seekers::*} contains attacker's name:
+                            if {hide::hiders::*} contains victim's name:
+                                deathAnimation(victim, attacker)
+                                execute console command "/nametag show %victim%"
+            else:
+                cancel event
+        else:
+            cancel event
+    if victim is a chicken:
+        if damage cause is not a plugin:
+            set damage to damage / 1000
+    
+on death:
+    if victim is a player:
+        if {hide::started} is true:
+            if {hide::hidetime} is false:
+                if {hide::hiders::*} contains victim's name:
+                    set victim's gamemode to spectator
+                    execute console command "/nametag show %victim%"
+                    remove victim from {hide::hiders::*}
+                    add victim's name to {hide::spectators::*}
+                    if size of {hide::hiders::*} = 2:
+                        set {hide::hider::third} to victim's name
+                    if size of {hide::hiders::*} = 1:
+                        set {hide::hider::second} to victim's name
+                    if size of {hide::hiders::*} = 0:
+                        set {hide::hider::first} to victim's name
+                    broadcast ""
+                    broadcast "&b&l[Hide'n'Seek] &d%victim% &3ist gestorben!"
+                    wait 1 second
+                    if size of {hide::hiders::*} is not 0:
+                        broadcast "   &3> Noch %size of {hide::hiders::*}% Hider am Leben!"
+                    else:
+                        hideEnd("seeker")
+                else:
+                    cancel event
+            else:
+                cancel event
+        else:
+            cancel event
+
+on break:
+    if player's gamemode is not creative:
+        cancel event
+
+on place:
+    if player's gamemode is not creative:
+        cancel event
+on explode:
+	clear exploded blocks
+
+on hunger meter change:
+    if player's world = {hide::world}:
+        if food level of player is not 10:
+            set food level of player to 10
+        else:
+            cancel event
+
+on heal:
+    if {hide::started} is true:
+        cancel event
+
+on swap hand items:
+    if {hide::started} is true:
+        cancel event
+
+on drop:
+    if {hide::started} is true:
+        if player's gamemode is not creative:
+            cancel event
+    if event-item = light blue concrete powder named "&bHide'n'Seek":
+        cancel event
+
+on chat:
+    if sender is a player:
+        cancel event
+        if {hide::hiders::*} contains player:
+            set {_m} to "&2&l[Hider] &a%player%: &f%message%"
+        else if {hide::seekers::*} contains player:
+            set {_m} to "&c&l[Seeker] &6%player%: &f%message%"
+        else if {hide::spectators::*} contains player:
+            set {_m} to "&f&l[Spec] &7%player%: &f%message%"
+        broadcast {_m}
+
+on tab complete of "/hide":
+    set tab completions for position 1 to "start", "stop", "removedisplay", "infoboard" and "location"
+    if tab arg-1 = "location":
+        set tab completions for position 2 to "spawn", "podium", "arena" and "list"
+        if tab arg-2 = "arena":
+            set tab completions for position 3 to "location1" and "location2"
+        else if tab arg-2 = "podium":
+            set tab completions for position 3 to "first", "second" and "third"
+        else if tab arg-2 = "spawn":
+            set tab completions for position 3 to "hiders", "seekers", "spectators", "end" and "waiting"
+
+
+on damage:
+    if attacker is a player:
+        if victim is a player:
+            deathAnimation(victim, attacker)
+            wait 8 seconds
+            set victim's gamemode to survival
+
+on spawn of chicken:
+    wait 5 seconds
+    kill event-entity
+
+on spawn of a skeleton or zombie or creeper or spider:
+    set health of event-entity to 3
+    wait 30 seconds
+    kill event-entity
+
+on death of chicken:
+    cancel drops
+
+on jump:
+    if {hide::countdown} is true:
+        if {hide::hiders::*} contains player's name:
+            cancel event
+        if {hide::seekers::*} contains player's name:
+            cancel event
+    if {hide::hidetime} is true:
+        if {hide::seekers::*} contains player's name:
+            cancel event
